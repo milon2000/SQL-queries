@@ -1,5 +1,5 @@
 -- CREATE DATABASE Firma_Turystyczna;
-DROP DATABASE Firma_Turystyczna;
+-- DROP DATABASE Firma_Turystyczna;
 
 ----- Firma Turystyczna -----
 ----- Autorzy Milena Kozłowska i Michał Kuranda ----
@@ -105,7 +105,7 @@ IF OBJECT_ID('Zamówienia ','U') IS NOT NULL
 GO
 CREATE TABLE Zamówienia
 (
-    ID_zamówienia INT PRIMARY KEY NOT NULL IDENTITY(1,1),
+    ID_zamówienia INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
     DataZamówienia DATE DEFAULT NULL,
     NazwaWycieczki NVARCHAR(50) NOT NULL FOREIGN KEY REFERENCES Wycieczki(NazwaWycieczki),
     IlośćWycieczek INT NULL,
@@ -114,8 +114,11 @@ CREATE TABLE Zamówienia
     IlośćDodatków INT NULL,
     CenaWycieczki INT NULL,
     CenaDodatku INT NULL,
+    MiejsceOdbioru NVARCHAR(50) NOT NULL REFERENCES Hotele(Nazwa),
     ID_klienta INT FOREIGN KEY REFERENCES Klienci(ID_klienta),
     ID_pracownika INT FOREIGN KEY REFERENCES Pracownicy(ID_pracownika),
+    CONSTRAINT IlośćDodatków
+    CHECK (IlośćDodatków <= IlośćWycieczek)
 )
 
 -- Tabela Refundacje przetrzymuje dane o wszytskich refundacjach, które miały miejsce. 
@@ -127,10 +130,11 @@ IF OBJECT_ID('Refundacje','U') IS NOT NULL
 GO
 CREATE TABLE Refundacje
 (
-    IdRefundacji INT PRIMARY KEY,
-    IdZamówienia INT REFERENCES Zamówienia (ID_zamówienia),
+    ID_refundacji INT PRIMARY KEY,
+    ID_zamówienia INT REFERENCES Zamówienia (ID_zamówienia),
     DataRefundacji DATE NOT NULL,
     DataWycieczki DATE NOT NULL,
+    KwotaRefundacji MONEY NOT NULL,
     CONSTRAINT DataRefundacji
     CHECK (DataRefundacji < DataWycieczki)
 )
@@ -148,8 +152,8 @@ CREATE TABLE Pasażerowie
     NumerRezerwacji INT NOT NULL REFERENCES Zamówienia(ID_zamówienia),
     ImieNazwisko NVARCHAR(50) NOT NULL,
     IlośćOsób INT NOT NULL,
-    MiejsceOdbioru NVARCHAR(50) NULL REFERENCES Hotele(Nazwa),
-    ID_klienta INT NOT NULL REFERENCES Łącznik(ID_klienta)
+    MiejsceOdbioru NVARCHAR(50) NOT NULL,
+    ID_klienta INT NOT NULL
 )
 GO
 
@@ -169,7 +173,7 @@ IF OBJECT_ID('Złoty_Krąg_2023_02_11','V') IS NOT NULL
 GO
 CREATE VIEW Złoty_Krąg_2023_02_11
 AS
-    SELECT Z.NazwaWycieczki AS [Złoty Krąg], Z.DataWycieczki AS [Data Wycieczki], P.ImieNazwisko AS [Imię i nazwisko], Z.IlośćOsób AS PAX, Z.NazwaDodatku AS [Dodatki], Z.IlośćDodatku AS [Ilość dodatków], P.MiejsceOdbioru AS [Miejsce Odbioru]
+    SELECT Z.NazwaWycieczki AS [Złoty Krąg], Z.DataWycieczki AS [Data Wycieczki], P.ImieNazwisko AS [Imię i nazwisko], Z.IlośćWycieczek AS PAX, Z.NazwaDodatku AS [Dodatki], Z.IlośćDodatków AS [Ilość dodatków], P.MiejsceOdbioru AS [Miejsce Odbioru]
     FROM Pasażerowie AS P
         INNER JOIN Zamówienia AS Z ON Z.ID_zamówienia = P.NumerRezerwacji
     WHERE Z.DataWycieczki = '2023-02-11' AND Z.NazwaWycieczki = 'Złoty Krąg'
@@ -185,17 +189,17 @@ FROM Złoty_Krąg_2023_02_11
 -- rozsądnym przybliżeniem.
 
 GO
-IF OBJECT_ID('Walentynki_Klienci_z_US_na_Snaefellsens','V') IS NOT NULL
-	DROP VIEW Walentynki_Klienci_z_US_na_Snaefellsens
+IF OBJECT_ID('Walentynkowi klienci z US na Snaefellsnes','V') IS NOT NULL
+	DROP VIEW [Walentynkowi klienci z US na Snaefellsnes]
 GO
 CREATE VIEW [Walentynkowi klienci z US na Snaefellsnes]
 AS
-    SELECT K.ID_klienta AS [ID], Z.IlośćOsób AS [PAX], COUNT(Z.ID_klienta) AS [Ilość par z US na Półwysep Snaefellsens]
+    SELECT Z.ID_klienta AS [ID], Z.IlośćWycieczek AS [PAX], COUNT(Z.ID_klienta) AS [Ilość par z US na Półwysep Snaefellsens]
     FROM Klienci AS K
         INNER JOIN Zamówienia AS Z ON K.ID_klienta = Z.ID_klienta
-    WHERE Adres LIKE '%US%' AND DataWycieczki = '2023-03-14' AND NazwaWycieczki = 'Półwysep Snaefellsens'
-    GROUP BY Z.ID_klienta, Z.IlośćOsób
-    HAVING IlośćOsób = 2;
+    WHERE K.Adres LIKE '%US%' AND Z.DataWycieczki = '2023-03-14' AND Z.NazwaWycieczki = 'Półwysep Snaefellsens'
+    GROUP BY Z.ID_klienta, Z.IlośćWycieczek
+    HAVING Z.IlośćWycieczek = 2;
 GO
 SELECT *
 FROM [Walentynkowi klienci z US na Snaefellsnes]
@@ -211,7 +215,7 @@ AS
     SELECT ID_klienta, SUM(IlośćWycieczek * CenaWycieczki + IlośćDodatków* CenaDodatku) as 'Suma Kwot'
     FROM Zamówienia
     GROUP BY ID_klienta
-    ORDER BY 'Suma Kwot' DESC;
+    -- ORDER BY 'Suma Kwot' DESC;
 
 -- Ta kwerenda tworzy widok, który połączył dane z tabel "Pracownicy" i "Zamówienia" po kluczu ID_pracownika, 
 -- pozwalając na zobaczenie imienia i nazwiska pracownika oraz numeru zamówienia w jednym wyniku. 
@@ -255,7 +259,25 @@ SELECT *
 FROM Pokaż_Informacje_o_Wycieczce('Złoty Krąg');
 GO
 
+-- Ta funkcja wyświetli dane pracowników (imię i nazwisko, stanowisko, nr telefonu oraz email), 
+-- którzy są zatrudnieni pomiędzy datami podanymi jako parametr. 
 
+IF OBJECT_ID('F_Z1','IF') IS NOT NULL
+	DROP FUNCTION F_Z1
+GO
+CREATE FUNCTION F_Z1(@DataPoczatkowa DATE, @DataKoncowa DATE)
+RETURNS TABLE
+AS
+RETURN (
+SELECT P.ImieNazwisko, P.Stanowisko, P.Tel, P.Email
+FROM Pracownicy AS P
+WHERE P.DataZatrudnienia BETWEEN @DataPoczatkowa AND @DataKoncowa
+)
+GO
+-- wywołanie funkcji
+SELECT *
+FROM F_Z1('2009-01-01', '2013-12-31')
+GO
 --------------------------------
 ---------- Procedury -----------
 --------------------------------
@@ -271,7 +293,7 @@ CREATE PROCEDURE Dodaj_pasażera_z_Zamówień
 AS
 BEGIN
         INSERT INTO Pasażerowie (NazwaWycieczki, DataWycieczki, NumerRezerwacji, ImieNazwisko, IlośćOsób, MiejsceOdbioru, ID_klienta)
-        SELECT NazwaWycieczki, DataWycieczki, ID_zamówienia, K.ImieNazwisko, Z.IlośćOsób, MiejsceOdbioru, K.ID_klienta
+        SELECT NazwaWycieczki, DataWycieczki, ID_zamówienia, K.ImieNazwisko, Z.IlośćWycieczek, Z.MiejsceOdbioru, Z.ID_klienta
         FROM Zamówienia AS Z
         JOIN Klienci AS K ON Z.ID_klienta = K.ID_klienta
 END;
@@ -282,8 +304,8 @@ END;
 -- W kolejnym kroku sprawdza, czy kwota zwrotu jest większa niż całkowity koszt zamówienia. 
 -- Jeśli tak, zgłasza błąd i zwraca 1, w przeciwnym razie wstawia rekord zwrotu do tabeli Refundacje.
 
-IF OBJECT_ID('DBO.sprawdzKwoteRefundacji','P') IS NOT NULL
-	DROP PROC DBO.SprawdzKwoteRefundacji
+IF OBJECT_ID('usp_sprawdzKwoteRefundacji','P') IS NOT NULL
+	DROP PROC usp_sprawdzKwoteRefundacji
 GO
 CREATE PROCEDURE usp_sprawdzKwoteRefundacji
     @ID_refundacji INT,
@@ -310,10 +332,10 @@ BEGIN
             (@ID_refundacji, @ID_zamówienia, @DataRefundacji, @DataWycieczki, @KwotaRefundacji)
     END
 END
-
+GO
 -- wywolanie procedury
-EXEC usp_sprawdzKwoteRefundacj 110355, 94321, '2023-10-20', '2023-02-10', 400
-
+EXEC usp_sprawdzKwoteRefundacji 110355, 94321, '2023-10-20', '2023-02-10', 400
+GO
 
 
 ---------------------------------
@@ -354,7 +376,7 @@ BEGIN
     DECLARE @DataWycieczki DATE = (SELECT DataWycieczki FROM inserted)
     DECLARE @MaxIlośćMiejsc INT = 19
 
-    SELECT @IlośćOsób = SUM(IlośćOsób)
+    SELECT @IlośćOsób = SUM(IlośćWycieczek)
     FROM Zamówienia
     WHERE NazwaWycieczki = @NazwaWycieczki AND DataWycieczki = @DataWycieczki
 
@@ -368,3 +390,35 @@ BEGIN
     END
 END
 GO
+
+-- Wyzwalacz tr_Dodaj_Klienta po wsadzie do Klientów sprawdza czy dany Klient dokonujący zamówienia już figuruje w tabeli Klienci czy nie.
+-- Jeżeli figuruje to następuje wsad identyfikatora klienta do tabeli Łącznik. Jeżeli klient nie figuruje, to następuje poprawne
+-- utworzenie rekordu z jego danymi w tabeli Klienci, a następnie wygenerowany dla niego identyfikator zostaje wsadzony do łącznika.
+-- W Łączniku identyfikator klienta w bieżącej sesji będzie pierwszym wpisem, więc jest łatwy do odnalezienia podczas wsadu do tabeli
+-- Zamówienia, która owego identyfikatora wymaga.
+
+CREATE TRIGGER tr_Dodaj_Klienta
+ON Klienci
+FOR INSERT
+AS
+BEGIN
+    DECLARE @ImieNazwisko NVARCHAR(50), @Adres NVARCHAR(50), @Tel NVARCHAR(50), @Email NVARCHAR(50), @NIP NVARCHAR(50);
+    SELECT @ImieNazwisko = inserted.ImieNazwisko, @Adres = inserted.Adres, @Tel = inserted.Tel, @Email = inserted.Email, @NIP = inserted.NIP
+    FROM inserted;
+
+    IF EXISTS (SELECT 1 FROM Klienci AS K WHERE ImieNazwisko = @ImieNazwisko AND Adres = @Adres AND Tel = @Tel AND Email = @Email)
+    BEGIN
+        INSERT INTO Łącznik
+        SELECT ID_klienta FROM Klienci AS K
+        WHERE K.ImieNazwisko = @ImieNazwisko AND K.Adres = @Adres AND K.Tel = @Tel AND K.Email = @Email
+        RAISERROR('Klient o podanych danych już istnieje.', 16, 1);
+    END;
+    ELSE
+    BEGIN
+        INSERT INTO Klienci (ImieNazwisko, Adres, Tel, Email, NIP)
+        VALUES (@ImieNazwisko, @Adres, @Tel, @Email, @NIP);
+        INSERT INTO Łącznik
+        SELECT ID_klienta FROM Klienci AS K
+        WHERE K.ImieNazwisko = @ImieNazwisko AND K.Adres = @Adres AND K.Tel = @Tel AND K.Email = @Email
+    END;
+END
