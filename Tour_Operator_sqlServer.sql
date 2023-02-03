@@ -15,12 +15,13 @@
 IF OBJECT_ID('Wycieczki','U') IS NOT NULL
     DROP TABLE Wycieczki
 GO
-CREATE TABLE Wycieczki (
-	NazwaWycieczki NVARCHAR(50) PRIMARY KEY NOT NULL,
-	Dostępność BIT NOT NULL,
-	Cena$ MONEY NOT NULL,
-	GodzinaRozpoczęcia TIME NOT NULL CHECK (GodzinaRozpoczęcia > '08:00:00'),
-	IlośćMiejsc INT NOT NULL CHECK (IlośćMiejsc < 20)
+CREATE TABLE Wycieczki
+(
+    NazwaWycieczki NVARCHAR(50) PRIMARY KEY NOT NULL,
+    Dostępność BIT NOT NULL,
+    Cena$ MONEY NOT NULL,
+    GodzinaRozpoczęcia TIME NOT NULL CHECK (GodzinaRozpoczęcia > '08:00:00'),
+    IlośćMiejsc INT NOT NULL CHECK (IlośćMiejsc < 20)
 )
 
 -- Tabela Dodatki agreguje wszystkie dodatkowe usługi, które oferujemy klientom wycieczek.
@@ -74,13 +75,14 @@ CREATE TABLE Pracownicy
 IF OBJECT_ID('Klienci','U') IS NOT NULL
 	DROP TABLE Klienci
 GO
-CREATE TABLE Klienci (
-	ID_klienta INT PRIMARY KEY IDENTITY(1,1),
-	ImieNazwisko NVARCHAR(50) NOT NULL,
-	Adres NVARCHAR(50) NOT NULL,
-	Tel NVARCHAR(50) NOT NULL,
-	Email NVARCHAR(50) NOT NULL,
-	NIP NVARCHAR(50) NULL
+CREATE TABLE Klienci
+(
+    ID_klienta INT PRIMARY KEY IDENTITY(1,1),
+    ImieNazwisko NVARCHAR(50) NOT NULL,
+    Adres NVARCHAR(50) NOT NULL,
+    Tel NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(50) NOT NULL,
+    NIP NVARCHAR(50) NULL
 )
 
 -- Tabela Łącznik, podczas uruchomienia wyzwalacza po wsadzie do Klienci, przyjmuje wsad ID_klienta, żeby przekazać go
@@ -89,7 +91,8 @@ CREATE TABLE Klienci (
 IF OBJECT_ID('Łącznik','U') IS NOT NULL
     DROP TABLE Łącznik
 GO
-CREATE TABLE Łącznik (
+CREATE TABLE Łącznik
+(
     ID_klienta INT PRIMARY KEY
 )
 
@@ -106,6 +109,7 @@ GO
 CREATE TABLE Zamówienia
 (
     ID_zamówienia INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+    NumerRezerwacji INT NOT NULL,
     DataZamówienia DATE DEFAULT NULL,
     NazwaWycieczki NVARCHAR(50) NOT NULL FOREIGN KEY REFERENCES Wycieczki(NazwaWycieczki),
     IlośćWycieczek INT NULL,
@@ -116,9 +120,7 @@ CREATE TABLE Zamówienia
     CenaDodatku INT NULL,
     MiejsceOdbioru NVARCHAR(50) NOT NULL REFERENCES Hotele(Nazwa),
     ID_klienta INT FOREIGN KEY REFERENCES Klienci(ID_klienta),
-    ID_pracownika INT FOREIGN KEY REFERENCES Pracownicy(ID_pracownika),
-    CONSTRAINT IlośćDodatków
-    CHECK (IlośćDodatków <= IlośćWycieczek)
+    ID_pracownika INT FOREIGN KEY REFERENCES Pracownicy(ID_pracownika)
 )
 
 -- Tabela Refundacje przetrzymuje dane o wszytskich refundacjach, które miały miejsce. 
@@ -215,7 +217,6 @@ AS
     SELECT ID_klienta, SUM(IlośćWycieczek * CenaWycieczki + IlośćDodatków* CenaDodatku) as 'Suma Kwot'
     FROM Zamówienia
     GROUP BY ID_klienta
-    -- ORDER BY 'Suma Kwot' DESC;
 
 -- Ta kwerenda tworzy widok, który połączył dane z tabel "Pracownicy" i "Zamówienia" po kluczu ID_pracownika, 
 -- pozwalając na zobaczenie imienia i nazwiska pracownika oraz numeru zamówienia w jednym wyniku. 
@@ -227,7 +228,7 @@ IF OBJECT_ID('WidokPracownicyZamowienia','V') IS NOT NULL
 GO
 CREATE VIEW WidokPracownicyZamowienia
 AS
-    SELECT P.ImieNazwisko AS [Imie i nazwisko pracownika], Z.ID_zamówienia
+    SELECT P.ImieNazwisko AS [Imie i nazwisko pracownika], Z.NumerRezerwacji
     FROM Pracownicy AS P
         JOIN Zamówienia AS Z
         ON P.ID_pracownika = Z.ID_pracownika;
@@ -292,9 +293,10 @@ GO
 CREATE PROCEDURE Dodaj_pasażera_z_Zamówień
 AS
 BEGIN
-        INSERT INTO Pasażerowie (NazwaWycieczki, DataWycieczki, NumerRezerwacji, ImieNazwisko, IlośćOsób, MiejsceOdbioru, ID_klienta)
-        SELECT NazwaWycieczki, DataWycieczki, ID_zamówienia, K.ImieNazwisko, Z.IlośćWycieczek, Z.MiejsceOdbioru, Z.ID_klienta
-        FROM Zamówienia AS Z
+    INSERT INTO Pasażerowie
+        (NazwaWycieczki, DataWycieczki, NumerRezerwacji, ImieNazwisko, IlośćOsób, MiejsceOdbioru, ID_klienta)
+    SELECT NazwaWycieczki, DataWycieczki, ID_zamówienia, K.ImieNazwisko, Z.IlośćWycieczek, Z.MiejsceOdbioru, Z.ID_klienta
+    FROM Zamówienia AS Z
         JOIN Klienci AS K ON Z.ID_klienta = K.ID_klienta
 END;
 
@@ -373,7 +375,8 @@ AS
 BEGIN
     DECLARE @IlośćOsób INT
     DECLARE @NazwaWycieczki NVARCHAR(50) = 'Złoty Krąg'
-    DECLARE @DataWycieczki DATE = (SELECT DataWycieczki FROM inserted)
+    DECLARE @DataWycieczki DATE = (SELECT DataWycieczki
+    FROM inserted)
     DECLARE @MaxIlośćMiejsc INT = 19
 
     SELECT @IlośćOsób = SUM(IlośćWycieczek)
@@ -406,19 +409,25 @@ BEGIN
     SELECT @ImieNazwisko = inserted.ImieNazwisko, @Adres = inserted.Adres, @Tel = inserted.Tel, @Email = inserted.Email, @NIP = inserted.NIP
     FROM inserted;
 
-    IF EXISTS (SELECT 1 FROM Klienci AS K WHERE ImieNazwisko = @ImieNazwisko AND Adres = @Adres AND Tel = @Tel AND Email = @Email)
+    IF EXISTS (SELECT 1
+    FROM Klienci AS K
+    WHERE ImieNazwisko = @ImieNazwisko AND Adres = @Adres AND Tel = @Tel AND Email = @Email)
     BEGIN
         INSERT INTO Łącznik
-        SELECT ID_klienta FROM Klienci AS K
+        SELECT ID_klienta
+        FROM Klienci AS K
         WHERE K.ImieNazwisko = @ImieNazwisko AND K.Adres = @Adres AND K.Tel = @Tel AND K.Email = @Email
         RAISERROR('Klient o podanych danych już istnieje.', 16, 1);
     END;
     ELSE
     BEGIN
-        INSERT INTO Klienci (ImieNazwisko, Adres, Tel, Email, NIP)
-        VALUES (@ImieNazwisko, @Adres, @Tel, @Email, @NIP);
+        INSERT INTO Klienci
+            (ImieNazwisko, Adres, Tel, Email, NIP)
+        VALUES
+            (@ImieNazwisko, @Adres, @Tel, @Email, @NIP);
         INSERT INTO Łącznik
-        SELECT ID_klienta FROM Klienci AS K
+        SELECT ID_klienta
+        FROM Klienci AS K
         WHERE K.ImieNazwisko = @ImieNazwisko AND K.Adres = @Adres AND K.Tel = @Tel AND K.Email = @Email
     END;
 END
