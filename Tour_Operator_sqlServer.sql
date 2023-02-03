@@ -111,14 +111,14 @@ CREATE TABLE Zamówienia
     ID_zamówienia INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
     NumerRezerwacji INT NOT NULL,
     DataZamówienia DATE DEFAULT NULL,
-    NazwaWycieczki NVARCHAR(50) NOT NULL FOREIGN KEY REFERENCES Wycieczki(NazwaWycieczki),
+    NazwaWycieczki NVARCHAR(50) NULL FOREIGN KEY REFERENCES Wycieczki(NazwaWycieczki),
     IlośćWycieczek INT NOT NULL,
     DataWycieczki DATE NOT NULL,
     NazwaDodatku NVARCHAR(50) NULL FOREIGN KEY REFERENCES Dodatki(NazwaDodatku),
     IlośćDodatków INT NOT NULL,
     CenaWycieczki INT NOT NULL,
     CenaDodatku INT NOT NULL,
-    MiejsceOdbioru NVARCHAR(50) NOT NULL REFERENCES Hotele(Nazwa),
+    MiejsceOdbioru NVARCHAR(50) NULL REFERENCES Hotele(Nazwa),
     ID_klienta INT FOREIGN KEY REFERENCES Klienci(ID_klienta),
     ID_pracownika INT FOREIGN KEY REFERENCES Pracownicy(ID_pracownika)
 )
@@ -506,14 +506,22 @@ FROM Zamówienia
 DELETE FROM Zamówienia
 
 INSERT INTO Zamówienia
-    (DataZamówienia, NazwaWycieczki, IlośćWycieczek, DataWycieczki, NazwaDodatku, IlośćDodatków, CenaWycieczki, CenaDodatku, MiejsceOdbioru, ID_klienta, ID_pracownika)
+    (NumerRezerwacji, DataZamówienia, NazwaWycieczki, IlośćWycieczek, DataWycieczki, NazwaDodatku, IlośćDodatków, CenaWycieczki, CenaDodatku, MiejsceOdbioru, ID_klienta, ID_pracownika)
 VALUES
-    (GETDATE(), 'Południowe Wybrzeże', 2, '2023-02-11', NULL, NULL, 110, NULL, 'Hotel Skuggi', 5, 12345)
+    (84321, GETDATE(), 'Południowe Wybrzeże', 2, '2023-02-11', NULL, 0, 110, 0, 'Hotel Skuggi', 5, 12345)
 
 INSERT INTO Zamówienia
-    (DataZamówienia, NazwaWycieczki, IlośćWycieczek, DataWycieczki, NazwaDodatku, IlośćDodatków, CenaWycieczki, CenaDodatku, MiejsceOdbioru, ID_klienta, ID_pracownika)
+    (NumerRezerwacji, DataZamówienia, NazwaWycieczki, IlośćWycieczek, DataWycieczki, NazwaDodatku, IlośćDodatków, CenaWycieczki, CenaDodatku, MiejsceOdbioru, ID_klienta, ID_pracownika)
 VALUES
-    (GETDATE(), 'Południowe Wybrzeże', 5, '2023-02-11', NULL, NULL, 110, NULL, 'Hotel Skuggi', 3, 12345)
+    (54321, GETDATE(), 'Południowe Wybrzeże', 5, '2023-02-11', NULL, 0, 110, 0, 'Hotel Skuggi', 3, 12345)
+INSERT INTO Zamówienia
+    (NumerRezerwacji, DataZamówienia, NazwaWycieczki, IlośćWycieczek, DataWycieczki, NazwaDodatku, IlośćDodatków, CenaWycieczki, CenaDodatku, MiejsceOdbioru, ID_klienta, ID_pracownika)
+VALUES
+    (74321, GETDATE(), 'Południowe Wybrzeże', 5, '2023-02-11', NULL, 0, 110, 0, 'Hotel Skuggi', 3, 12345)
+INSERT INTO Zamówienia
+    (NumerRezerwacji, DataZamówienia, NazwaWycieczki, IlośćWycieczek, DataWycieczki, NazwaDodatku, IlośćDodatków, CenaWycieczki, CenaDodatku, MiejsceOdbioru, ID_klienta, ID_pracownika)
+VALUES
+    (54321, GETDATE(), null, 0, '2023-01-13', 'Fotelik dziecięcy', 1, 0, 10, null, 1, 12345)
 
 INSERT INTO Wycieczki
     (NazwaWycieczki, Dostępność, Cena$, GodzinaRozpoczęcia, IlośćMiejsc)
@@ -532,7 +540,12 @@ VALUES
 INSERT INTO Pracownicy
     (ID_Pracownika, ImieNazwisko, Stanowisko, DataZatrudnienia, Tel, Email, Adres)
 VALUES
-    (12345, 'Unshimi Krodande', 'Operacje', '2013-05-06', 19556604, 'unshimi@gmail.com', 'Storens vei 13, Kongsberg')
+    (12345, 'Unshimi Krodande', 'Operacje', '2013-05-06', 19556604, 'unshimi@gmail.com', 'Storens vei 13, Kongsberg'),
+    (22345, 'Elidvu Bhiulnu', 'Przewodnik', '2010-10-01', 666606, 'elidvu@gmail.com', 'Eidstoppen 16, Hof'),
+    (32345, 'Nadendi Niesa', 'Przewodnik', '2011-02-01', 766707, 'nadendi@gmail.com', 'Roaveienn 20, Hokksund'),
+    (42345, 'Ghairrakh Bhegeruh', 'Pilot', '2012-03-01', 866707, 'ghairrakh@gmail.com', 'Solhoyveine 20, Holmestrand'),
+    (52345, 'Bhepiksho Zibir', 'Sekretarz', '2009-08-06', 962747, 'bhepiksho@gmail.com', 'Markveien 2, Kongsberg'),
+    (62345, 'Rhihoco Ralnud', 'Pilot', '2001-02-06', 161717, 'rhihoco@gmail.com', 'Funkelia 18, Kongsberg' )
 
 INSERT INTO Dodatki
     (NazwaDodatku, Cena$)
