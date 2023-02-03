@@ -276,6 +276,7 @@ WHERE P.DataZatrudnienia BETWEEN @DataPoczatkowa AND @DataKoncowa
 )
 GO
 -- wywołanie funkcji
+
 SELECT *
 FROM F_Z1('2009-01-01', '2013-12-31')
 GO
