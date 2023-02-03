@@ -15,12 +15,13 @@
 IF OBJECT_ID('Wycieczki','U') IS NOT NULL
     DROP TABLE Wycieczki
 GO
-CREATE TABLE Wycieczki (
-	NazwaWycieczki NVARCHAR(50) PRIMARY KEY NOT NULL,
-	Dostępność BIT NOT NULL,
-	Cena$ MONEY NOT NULL,
-	GodzinaRozpoczęcia TIME NOT NULL CHECK (GodzinaRozpoczęcia > '08:00:00'),
-	IlośćMiejsc INT NOT NULL CHECK (IlośćMiejsc < 20)
+CREATE TABLE Wycieczki
+(
+    NazwaWycieczki NVARCHAR(50) PRIMARY KEY NOT NULL,
+    Dostępność BIT NOT NULL,
+    Cena$ MONEY NOT NULL,
+    GodzinaRozpoczęcia TIME NOT NULL CHECK (GodzinaRozpoczęcia > '08:00:00'),
+    IlośćMiejsc INT NOT NULL CHECK (IlośćMiejsc < 20)
 )
 
 -- Tabela Dodatki agreguje wszystkie dodatkowe usługi, które oferujemy klientom wycieczek.
@@ -74,13 +75,14 @@ CREATE TABLE Pracownicy
 IF OBJECT_ID('Klienci','U') IS NOT NULL
 	DROP TABLE Klienci
 GO
-CREATE TABLE Klienci (
-	ID_klienta INT PRIMARY KEY IDENTITY(1,1),
-	ImieNazwisko NVARCHAR(50) NOT NULL,
-	Adres NVARCHAR(50) NOT NULL,
-	Tel NVARCHAR(50) NOT NULL,
-	Email NVARCHAR(50) NOT NULL,
-	NIP NVARCHAR(50) NULL
+CREATE TABLE Klienci
+(
+    ID_klienta INT PRIMARY KEY IDENTITY(1,1),
+    ImieNazwisko NVARCHAR(50) NOT NULL,
+    Adres NVARCHAR(50) NOT NULL,
+    Tel NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(50) NOT NULL,
+    NIP NVARCHAR(50) NULL
 )
 
 -- Tabela Łącznik, podczas uruchomienia wyzwalacza po wsadzie do Klienci, przyjmuje wsad ID_klienta, żeby przekazać go
@@ -89,7 +91,8 @@ CREATE TABLE Klienci (
 IF OBJECT_ID('Łącznik','U') IS NOT NULL
     DROP TABLE Łącznik
 GO
-CREATE TABLE Łącznik (
+CREATE TABLE Łącznik
+(
     ID_klienta INT PRIMARY KEY
 )
 
@@ -106,14 +109,15 @@ GO
 CREATE TABLE Zamówienia
 (
     ID_zamówienia INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+    NumerRezerwacji INT NOT NULL,
     DataZamówienia DATE DEFAULT NULL,
     NazwaWycieczki NVARCHAR(50) NOT NULL FOREIGN KEY REFERENCES Wycieczki(NazwaWycieczki),
-    IlośćWycieczek INT NULL,
+    IlośćWycieczek INT NOT NULL,
     DataWycieczki DATE NOT NULL,
     NazwaDodatku NVARCHAR(50) NULL FOREIGN KEY REFERENCES Dodatki(NazwaDodatku),
-    IlośćDodatków INT NULL,
-    CenaWycieczki INT NULL,
-    CenaDodatku INT NULL,
+    IlośćDodatków INT NOT NULL,
+    CenaWycieczki INT NOT NULL,
+    CenaDodatku INT NOT NULL,
     MiejsceOdbioru NVARCHAR(50) NOT NULL REFERENCES Hotele(Nazwa),
     ID_klienta INT FOREIGN KEY REFERENCES Klienci(ID_klienta),
     ID_pracownika INT FOREIGN KEY REFERENCES Pracownicy(ID_pracownika)
@@ -210,10 +214,9 @@ IF OBJECT_ID('SumaKwotKlientów','V') IS NOT NULL
 GO
 CREATE VIEW SumaKwotKlientów
 AS
-    SELECT ID_klienta, SUM(IlośćWycieczek * CenaWycieczki + IlośćDodatków* CenaDodatku) as 'Suma Kwot'
+    SELECT ID_klienta, SUM(IlośćWycieczek * CenaWycieczki + IlośćDodatków * CenaDodatku) as 'Suma Kwot'
     FROM Zamówienia
     GROUP BY ID_klienta
-    -- ORDER BY 'Suma Kwot' DESC;
 
 -- Ta kwerenda tworzy widok, który połączył dane z tabel "Pracownicy" i "Zamówienia" po kluczu ID_pracownika, 
 -- pozwalając na zobaczenie imienia i nazwiska pracownika oraz numeru zamówienia w jednym wyniku. 
@@ -290,9 +293,10 @@ GO
 CREATE PROCEDURE Dodaj_pasażera_z_Zamówień
 AS
 BEGIN
-        INSERT INTO Pasażerowie (NazwaWycieczki, DataWycieczki, NumerRezerwacji, ImieNazwisko, IlośćOsób, MiejsceOdbioru, ID_klienta)
-        SELECT NazwaWycieczki, DataWycieczki, ID_zamówienia, K.ImieNazwisko, Z.IlośćWycieczek, Z.MiejsceOdbioru, Z.ID_klienta
-        FROM Zamówienia AS Z
+    INSERT INTO Pasażerowie
+        (NazwaWycieczki, DataWycieczki, NumerRezerwacji, ImieNazwisko, IlośćOsób, MiejsceOdbioru, ID_klienta)
+    SELECT NazwaWycieczki, DataWycieczki, ID_zamówienia, K.ImieNazwisko, Z.IlośćWycieczek, Z.MiejsceOdbioru, Z.ID_klienta
+    FROM Zamówienia AS Z
         JOIN Klienci AS K ON Z.ID_klienta = K.ID_klienta
 END;
 
@@ -371,7 +375,8 @@ AS
 BEGIN
     DECLARE @IlośćOsób INT
     DECLARE @NazwaWycieczki NVARCHAR(50) = 'Południowe Wybrzeże'
-    DECLARE @DataWycieczki DATE = (SELECT DataWycieczki FROM inserted)
+    DECLARE @DataWycieczki DATE = (SELECT DataWycieczki
+    FROM inserted)
     DECLARE @MaxIlośćMiejsc INT = 19
 
     SELECT @IlośćOsób = SUM(IlośćWycieczek)
@@ -382,7 +387,8 @@ BEGIN
     BEGIN
         RAISERROR ('Wycieczka niedostępna', 16, 1)
         DELETE FROM Zamówienia
-        WHERE  ID_zamówienia = (SELECT Max(ID_zamówienia) FROM Zamówienia)
+        WHERE  ID_zamówienia = (SELECT Max(ID_zamówienia)
+        FROM Zamówienia)
     END
     ELSE
     BEGIN
@@ -401,7 +407,8 @@ AS
 BEGIN
     DECLARE @IlośćOsób INT
     DECLARE @NazwaWycieczki NVARCHAR(50) = 'Złoty Krąg'
-    DECLARE @DataWycieczki DATE = (SELECT DataWycieczki FROM inserted)
+    DECLARE @DataWycieczki DATE = (SELECT DataWycieczki
+    FROM inserted)
     DECLARE @MaxIlośćMiejsc INT = 19
 
     SELECT @IlośćOsób = SUM(IlośćWycieczek)
@@ -440,7 +447,9 @@ BEGIN
     SELECT @ImieNazwisko = i.ImieNazwisko, @Adres = i.Adres, @Tel = i.Tel, @Email = i.Email, @NIP = i.NIP
     FROM inserted AS i;
 
-    IF (SELECT COUNT(K.ID_klienta) FROM inserted AS i, Klienci AS K WHERE i.ImieNazwisko = K.ImieNazwisko AND i.Adres = K.Adres AND i.Tel = K.Tel AND i.Email = K.Email AND i.NIP = K.NIP) > 1
+    IF (SELECT COUNT(K.ID_klienta)
+    FROM inserted AS i, Klienci AS K
+    WHERE i.ImieNazwisko = K.ImieNazwisko AND i.Adres = K.Adres AND i.Tel = K.Tel AND i.Email = K.Email AND i.NIP = K.NIP) > 1
     BEGIN
         SET @KlientIstnieje = 1
         RAISERROR('Klient o podanych danych już istnieje.', 16, 1)
@@ -448,44 +457,71 @@ BEGIN
     IF @KlientIstnieje = 1
     BEGIN
         DELETE FROM Klienci
-        WHERE  ID_klienta = (SELECT Max(ID_klienta) FROM Klienci)
+        WHERE  ID_klienta = (SELECT Max(ID_klienta)
+        FROM Klienci)
     END
     INSERT INTO Łącznik
-    SELECT ID_klienta FROM Klienci AS K
+    SELECT ID_klienta
+    FROM Klienci AS K
     WHERE K.ImieNazwisko = @ImieNazwisko AND K.Adres = @Adres AND K.Tel = @Tel AND K.Email = @Email
 END
 
-INSERT INTO Klienci (ImieNazwisko, Adres, Tel, Email, NIP) VALUES ('John Goodman', 'Salt Lake City, US', '001345678901','goodman.j87@gmail.com','798320189')
-INSERT INTO Klienci (ImieNazwisko, Adres, Tel, Email, NIP) VALUES ('Mary Jane Watson', 'NY, US', '001322667788','mj.watson@gmail.com','7456777754')
-INSERT INTO Klienci (ImieNazwisko, Adres, Tel, Email, NIP) VALUES ('Peter Parker', 'Huston, US', '001999654433','pp1991@gmail.com','45665656')
-INSERT INTO Klienci (ImieNazwisko, Adres, Tel, Email, NIP) VALUES ('Sansa Stark', 'Boston, US', '001223344556','gots07e01@gmail.com','3345765467')
+INSERT INTO Klienci
+    (ImieNazwisko, Adres, Tel, Email, NIP)
+VALUES
+    ('John Goodman', 'Salt Lake City, US', '001345678901', 'goodman.j87@gmail.com', '798320189')
+INSERT INTO Klienci
+    (ImieNazwisko, Adres, Tel, Email, NIP)
+VALUES
+    ('Mary Jane Watson', 'NY, US', '001322667788', 'mj.watson@gmail.com', '7456777754')
+INSERT INTO Klienci
+    (ImieNazwisko, Adres, Tel, Email, NIP)
+VALUES
+    ('Peter Parker', 'Huston, US', '001999654433', 'pp1991@gmail.com', '45665656')
+INSERT INTO Klienci
+    (ImieNazwisko, Adres, Tel, Email, NIP)
+VALUES
+    ('Sansa Stark', 'Boston, US', '001223344556', 'gots07e01@gmail.com', '3345765467')
 
 
-INSERT INTO Klienci (ImieNazwisko, Adres, Tel, Email, NIP) VALUES ('Peter Parker', 'Huston, US', '001999654433','pp1991@gmail.com','45665656')
-INSERT INTO Klienci (ImieNazwisko, Adres, Tel, Email, NIP) VALUES ('The Rock', 'Los Angeles, US', '001876437892','rock@gmail.com','478034588')
+INSERT INTO Klienci
+    (ImieNazwisko, Adres, Tel, Email, NIP)
+VALUES
+    ('Peter Parker', 'Huston, US', '001999654433', 'pp1991@gmail.com', '45665656')
+INSERT INTO Klienci
+    (ImieNazwisko, Adres, Tel, Email, NIP)
+VALUES
+    ('The Rock', 'Los Angeles, US', '001876437892', 'rock@gmail.com', '478034588')
 
 
 ---------- Wsady i Selecty
 
-SELECT * FROM Klienci
-SELECT * FROM Łącznik
-SELECT * FROM Zamówienia
+SELECT *
+FROM Klienci
+SELECT *
+FROM Łącznik
+SELECT *
+FROM Zamówienia
 DELETE FROM Zamówienia
 
 INSERT INTO Zamówienia
     (DataZamówienia, NazwaWycieczki, IlośćWycieczek, DataWycieczki, NazwaDodatku, IlośćDodatków, CenaWycieczki, CenaDodatku, MiejsceOdbioru, ID_klienta, ID_pracownika)
 VALUES
-    (GETDATE(), 'Południowe Wybrzeże', 2, '2023-02-11', NULL, NULL, 110, NULL,'Hotel Skuggi', 5, 12345)
+    (GETDATE(), 'Południowe Wybrzeże', 2, '2023-02-11', NULL, NULL, 110, NULL, 'Hotel Skuggi', 5, 12345)
 
 INSERT INTO Zamówienia
     (DataZamówienia, NazwaWycieczki, IlośćWycieczek, DataWycieczki, NazwaDodatku, IlośćDodatków, CenaWycieczki, CenaDodatku, MiejsceOdbioru, ID_klienta, ID_pracownika)
 VALUES
-    (GETDATE(), 'Południowe Wybrzeże', 5, '2023-02-11', NULL, NULL, 110, NULL,'Hotel Skuggi', 3, 12345)
+    (GETDATE(), 'Południowe Wybrzeże', 5, '2023-02-11', NULL, NULL, 110, NULL, 'Hotel Skuggi', 3, 12345)
 
-INSERT INTO Wycieczki (NazwaWycieczki, Dostępność, Cena$, GodzinaRozpoczęcia, IlośćMiejsc)
-VALUES ('Południowe Wybrzeże', 1, 120, '08:30:00', 19)
+INSERT INTO Wycieczki
+    (NazwaWycieczki, Dostępność, Cena$, GodzinaRozpoczęcia, IlośćMiejsc)
+VALUES
+    ('Południowe Wybrzeże', 1, 120, '08:30:00', 19)
 
-INSERT INTO Hotele (Nazwa, Adres) VALUES
+INSERT INTO Hotele
+    (Nazwa, Adres)
+VALUES
     ('Hotel Skuggi', 'Hverfisgata 95'),
     ('Hilton Nordica', 'Sudurlandsbraut 1'),
     ('Centerhotel Plaza', 'Sudurlandsbraut 1'),
