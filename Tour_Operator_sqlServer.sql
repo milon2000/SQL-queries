@@ -132,7 +132,7 @@ IF OBJECT_ID('Refundacje','U') IS NOT NULL
 GO
 CREATE TABLE Refundacje
 (
-    ID_refundacji INT PRIMARY KEY,
+    ID_refundacji INT PRIMARY KEY IDENTITY(1,1),
     ID_zamówienia INT REFERENCES Zamówienia (ID_zamówienia),
     DataRefundacji DATE NOT NULL,
     DataWycieczki DATE NOT NULL,
@@ -158,6 +158,7 @@ CREATE TABLE Pasażerowie
     ID_klienta INT NOT NULL
 )
 GO
+test
 
 
 ---------------------------
